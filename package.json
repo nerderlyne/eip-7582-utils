@@ -1,6 +1,6 @@
 {
   "name": "eip-7582-utils",
-  "version": "0.1.1-alpha.1",
+  "version": "0.1.0",
   "author": "Shivanshi Tyagi",
   "description": "Library for EIP-7582 utilities",
   "main": "dist/index.js",

@@ -31,3 +31,7 @@ export function getValidatorFromKey(key: bigint): Address {
 export function getValidatorFromNonce(nonce: bigint): Address {
   return getValidatorFromKey(getKeyFromNonce(nonce));
 }
+
+export function getNonce(key: bigint, sequence: bigint): bigint {
+  return sequence | (key << 64n);
+}

@@ -4,6 +4,7 @@ import {
   getKeyFromNonce,
   getValidatorFromKey,
   getValidatorFromNonce,
+  getNonce,
 } from "../src/utils";
 import { getAddress, type Address } from "viem";
 
@@ -83,6 +84,12 @@ describe("Validator Utility Functions", () => {
     }
   });
 
+  test("Zero nonce case", () => {
+    const zeroNonce = 0n;
+    const extractedKey = getKeyFromNonce(zeroNonce);
+    expect(extractedKey).toBe(0n);
+  });
+
   test("Invariant testing: Key and nonce relationships", () => {
     const iterations = 1000;
     for (let i = 0; i < iterations; i++) {
@@ -114,5 +121,63 @@ describe("Validator Utility Functions", () => {
     const recoveredKey = getKeyFromNonce(nonce);
     const recoveredAddress = getValidatorFromKey(recoveredKey);
     expect(recoveredAddress).toBe(address.toLowerCase());
+  });
+});
+
+describe("getNonce", () => {
+  test("getNonce with specific values", () => {
+    const key = 1234567890n;
+    const sequenceNumber = 9876n;
+    const expectedNonce = 22773757908449605611411220116n;
+    expect(getNonce(key, sequenceNumber)).toBe(expectedNonce);
+  });
+
+  test("getNonce with zero key", () => {
+    const key = 0n;
+    const sequenceNumber = 42n;
+    expect(getNonce(key, sequenceNumber)).toBe(42n);
+  });
+
+  test("getNonce with zero sequence number", () => {
+    const key = 1234567890n;
+    const sequenceNumber = 0n;
+    expect(getNonce(key, sequenceNumber)).toBe(key << 64n);
+  });
+
+  test("getNonce with max values", () => {
+    const key = (1n << 192n) - 1n;
+    const sequenceNumber = (1n << 64n) - 1n;
+    const expectedNonce = (((1n << 192n) - 1n) << 64n) | ((1n << 64n) - 1n);
+    expect(getNonce(key, sequenceNumber)).toBe(expectedNonce);
+  });
+
+  test("Property-based testing: getNonce", () => {
+    const iterations = 1000;
+    for (let i = 0; i < iterations; i++) {
+      const key = randomBigInt(0n, (1n << 192n) - 1n);
+      const sequenceNumber = randomBigInt(0n, (1n << 64n) - 1n);
+      const nonce = getNonce(key, sequenceNumber);
+
+      // Check that the lower 64 bits of the nonce match the sequence number
+      expect(nonce & ((1n << 64n) - 1n)).toBe(sequenceNumber);
+
+      // Check that the upper bits of the nonce match the key
+      expect(nonce >> 64n).toBe(key);
+
+      // Check that we can recover the key and sequence number
+      expect(getKeyFromNonce(nonce)).toBe(key);
+      expect(nonce & ((1n << 64n) - 1n)).toBe(sequenceNumber);
+    }
+  });
+
+  test("Roundtrip: key -> nonce -> key", () => {
+    const iterations = 1000;
+    for (let i = 0; i < iterations; i++) {
+      const originalKey = randomBigInt(0n, (1n << 192n) - 1n);
+      const sequenceNumber = randomBigInt(0n, (1n << 64n) - 1n);
+      const nonce = getNonce(originalKey, sequenceNumber);
+      const recoveredKey = getKeyFromNonce(nonce);
+      expect(recoveredKey).toBe(originalKey);
+    }
   });
 });
